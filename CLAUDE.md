@@ -38,7 +38,7 @@
 │   │       ├── UseCases/
 │   │       │   └── ProcessBookBatchUseCase.cs   # orchestrates: read -> parse -> validate -> insert -> report
 │   │       ├── Validators/
-│   │       │   └── BookValidator.cs    # enforces ISBN + Title required
+│   │       │   └── BookValidator.cs    # enforces ISBN + Title + Author required
 │   │       └── Models/
 │   │           ├── BookCsvRecord.cs    # raw strongly-typed row shape straight off the CSV
 │   │           └── BatchResult.cs      # summary: total rows, inserted, rejected, errors[]

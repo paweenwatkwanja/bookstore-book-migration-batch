@@ -1,0 +1,59 @@
+services:
+  mongo:
+    image: mongo:8.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  floci:
+    image: floci/floci:latest
+    ports:
+      - "4566:4566"
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  floci-init:
+    image: amazon/aws-cli:latest
+    depends_on:
+      - floci
+    environment:
+      AWS_ENDPOINT_URL: http://floci:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+      S3_BUCKET_NAME: bookstore-books
+      S3_OBJECT_KEY: books/BX-Books.csv
+      SAMPLE_CSV_PATH: /seed-data/BX-Books-Sample.csv
+    entrypoint: ["/bin/bash", "/init-s3.sh"]
+    volumes:
+      - ./init-s3.sh:/init-s3.sh:ro
+      - ./tests/TestData:/seed-data:ro
+
+  batch-job:
+    build: .
+    depends_on:
+      mongo:
+        condition: service_healthy
+      floci-init:
+        condition: service_completed_successfully
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      AWS_ENDPOINT_URL: http://floci:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+    command: ["BookMigrate"]
+
+volumes:
+  mongo-data:
